@@ -1,0 +1,123 @@
+﻿using UnityEngine;
+using UnityEngine.Serialization;
+
+public class Jump2D : MonoBehaviour
+{
+    private Rigidbody2D _rigidbody;
+
+    [Header("Jump Settings")]
+    [Tooltip("Force applied when jumping (higher = higher jumps)")]
+    [FormerlySerializedAs("JumpForce")]
+    [SerializeField]
+    private float jumpForce = 5f;
+
+    [Tooltip("Maximum number of jumps allowed (1 = single jump, 2 = double jump, etc.)")]
+    [FormerlySerializedAs("MaxJumpCount")]
+    [SerializeField]
+    private int maxJumpCount = 2;
+
+    [Header("Gravity Settings")]
+    [Tooltip("Gravity multiplier when falling (higher = falls faster)")]
+    [FormerlySerializedAs("FallGravityMultiplier")]
+    [SerializeField]
+    private float fallGravityMultiplier = 2.5f;
+
+    [Tooltip("Gravity multiplier when rising (lower = floatier jump)")]
+    [FormerlySerializedAs("RiseGravityMultiplier")]
+    [SerializeField]
+    private float riseGravityMultiplier = 0.7f;
+
+    [Header("Coyote Time")]
+    [Tooltip("Grace period after leaving ground where player can still jump (in seconds)")]
+    [FormerlySerializedAs("MaxCoyoteTime")]
+    [SerializeField]
+    private float maxCoyoteTime = 0.1f;
+
+    private int _jumpCount;
+    private float _defaultGravityScale;
+    private float _coyoteTimeRemaining;
+    private bool _wasGrounded;
+    private bool _isGrounded;
+    private bool _isJumping;
+
+    private void Awake()
+    {
+        _rigidbody = GetComponent<Rigidbody2D>();
+        _defaultGravityScale = _rigidbody.gravityScale;
+        _coyoteTimeRemaining = maxCoyoteTime;
+    }
+
+    private void Update()
+    {
+        UpdateGravity();
+    }
+
+    private void UpdateGravity()
+    {
+        float velocityY = _rigidbody.linearVelocity.y;
+
+        _rigidbody.gravityScale = velocityY switch
+        {
+            < 0 => _defaultGravityScale * fallGravityMultiplier,
+            > 0 when _isJumping => _defaultGravityScale * riseGravityMultiplier,
+            _ => _defaultGravityScale
+        };
+    }
+
+    public void Jump(bool input, bool isGrounded)
+    {
+        switch (isGrounded)
+        {
+            case true when !_wasGrounded:
+                OnLanded();
+                break;
+            case false when _wasGrounded:
+                _coyoteTimeRemaining = maxCoyoteTime;
+                break;
+            case false when !_isJumping:
+                _coyoteTimeRemaining -= Time.deltaTime;
+                _coyoteTimeRemaining = Mathf.Max(0f, _coyoteTimeRemaining);
+                break;
+        }
+
+        _wasGrounded = isGrounded;
+        _isGrounded = isGrounded;
+
+        if (!CanJump(input)) return;
+
+        PerformJump();
+    }
+
+    private void OnLanded()
+    {
+        _jumpCount = 0;
+        _isJumping = false;
+        _coyoteTimeRemaining = maxCoyoteTime;
+    }
+
+    private bool CanJump(bool input)
+    {
+        if (!input) return false;
+        if (_jumpCount >= maxJumpCount) return false;
+
+        if (_jumpCount == 0)
+        {
+            return _isGrounded || _coyoteTimeRemaining > 0;
+        }
+
+        return true;
+    }
+
+    private void PerformJump()
+    {
+        _jumpCount++;
+        _isJumping = true;
+        _coyoteTimeRemaining = 0f;
+
+        Vector2 velocity = _rigidbody.linearVelocity;
+        velocity.y = 0f;
+        _rigidbody.linearVelocity = velocity;
+
+        _rigidbody.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+    }
+}
