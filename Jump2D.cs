@@ -69,12 +69,7 @@ public class Jump2D : MonoBehaviour
     {
         if (!input) return false;
         if (_jumpCount >= maxJumpCount) return false;
-
-        if (_jumpCount == 0)
-        {
-            return _isGrounded || _coyoteTimeRemaining > 0;
-        }
-
+        if (_jumpCount == 0) return _isGrounded || _coyoteTimeRemaining > 0;
         return true;
     }
 
@@ -90,4 +85,10 @@ public class Jump2D : MonoBehaviour
 
         _rigidbody.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
     }
+
+    public void ResetJumpCount() => _jumpCount = 0;
+
+    public int GetJumpCount() => _jumpCount;
+
+    public void SetJumpCount(int count) => _jumpCount = count;
 }

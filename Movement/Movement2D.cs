@@ -1,53 +1,30 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class Movement2D : MonoBehaviour
 {
     // Components
     private Rigidbody2D _rigidbody;
 
-    // Settings
-    [Header("Input Settings")]
-    [Tooltip("Input deadzone threshold: minimum input value to detect movement")]
-    [FormerlySerializedAs("InputThreshold")]
-    [SerializeField]
-    private float inputThreshold = 0.1f;
-
-    [Header("Movement Settings")]
-    [Tooltip("Maximum walking speed (units per second)")]
-    [FormerlySerializedAs("MaxWalkSpeed")]
-    [SerializeField]
-    private float maxWalkSpeed = 12.5f;
-
-    [Header("Ground Movement")]
-    [Tooltip("Acceleration rate while grounded")]
-    [FormerlySerializedAs("GroundAcceleration")]
-    [SerializeField]
-    private float groundAcceleration = 5f;
-
-    [Tooltip("Deceleration rate while grounded")] [FormerlySerializedAs("GroundDeceleration")] [SerializeField]
-    private float groundDeceleration = 20f;
-
-    [Header("Air Movement")]
-    [Tooltip("Acceleration rate while in air")]
-    [FormerlySerializedAs("AirAcceleration")]
-    [SerializeField]
-    private float airAcceleration = 5f;
-
-    [Tooltip("Deceleration rate while in air")] [FormerlySerializedAs("AirDeceleration")] [SerializeField]
-    private float airDeceleration = 5f;
+    private MovementProfile _movementProfile;
 
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();
+        if (!_movementProfile)
+        {
+            _movementProfile = ScriptableObject.CreateInstance<MovementProfile>();
+        }
     }
 
     private void MoveWithParams(float acceleration, float deceleration, float input)
     {
+        Turn(input);
         Vector2 currentVelocity = _rigidbody.linearVelocity;
-        if (Mathf.Abs(input) > inputThreshold)
+        if (Mathf.Abs(input) > _movementProfile.inputThreshold)
         {
-            float newSpeed = Mathf.Lerp(currentVelocity.x, maxWalkSpeed * input, acceleration * Time.fixedDeltaTime);
+            float newSpeed = Mathf.Lerp(currentVelocity.x, _movementProfile.maxWalkSpeed * input,
+                acceleration * Time.fixedDeltaTime);
             _rigidbody.linearVelocity = new Vector2(newSpeed, currentVelocity.y);
         }
         else
@@ -57,20 +34,27 @@ public class Movement2D : MonoBehaviour
         }
     }
 
-    public void Move(float input, MovementType movementType = MovementType.Ground)
+    private void Turn(float x)
     {
-        if (!_rigidbody) return;
-        switch ((byte)movementType)
+        if (x < -_movementProfile.inputThreshold)
         {
-            case 0:
-                MoveWithParams(airAcceleration, airDeceleration, input);
-                break;
-            case 1:
-                MoveWithParams(groundAcceleration, groundDeceleration, input);
-                break;
-            default:
-                MoveWithParams(groundAcceleration, groundDeceleration, input);
-                break;
+            transform.rotation = Quaternion.Euler(0f, 180f, 0f);
         }
+        else if (x > _movementProfile.inputThreshold)
+        {
+            transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+        }
+    }
+
+    public void Move(float input)
+    {
+        if (!_rigidbody || !_movementProfile) return;
+        MoveWithParams(_movementProfile.acceleration, _movementProfile.deceleration, input);
+    }
+
+    public void SetMovementProfile(MovementProfile movementProfile)
+    {
+        if (!_rigidbody || !_movementProfile || this._movementProfile == movementProfile) return;
+        this._movementProfile = movementProfile;
     }
 }
