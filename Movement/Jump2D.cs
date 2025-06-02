@@ -16,17 +16,6 @@ public class Jump2D : MonoBehaviour
     [SerializeField]
     private int maxJumpCount = 2;
 
-    [Header("Gravity Settings")]
-    [Tooltip("Gravity multiplier when falling (higher = falls faster)")]
-    [FormerlySerializedAs("FallGravityMultiplier")]
-    [SerializeField]
-    private float fallGravityMultiplier = 2.5f;
-
-    [Tooltip("Gravity multiplier when rising (lower = floatier jump)")]
-    [FormerlySerializedAs("RiseGravityMultiplier")]
-    [SerializeField]
-    private float riseGravityMultiplier = 0.7f;
-
     [Header("Coyote Time")]
     [Tooltip("Grace period after leaving ground where player can still jump (in seconds)")]
     [FormerlySerializedAs("MaxCoyoteTime")]
@@ -34,7 +23,6 @@ public class Jump2D : MonoBehaviour
     private float maxCoyoteTime = 0.1f;
 
     private int _jumpCount;
-    private float _defaultGravityScale;
     private float _coyoteTimeRemaining;
     private bool _wasGrounded;
     private bool _isGrounded;
@@ -43,25 +31,7 @@ public class Jump2D : MonoBehaviour
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();
-        _defaultGravityScale = _rigidbody.gravityScale;
         _coyoteTimeRemaining = maxCoyoteTime;
-    }
-
-    private void Update()
-    {
-        UpdateGravity();
-    }
-
-    private void UpdateGravity()
-    {
-        float velocityY = _rigidbody.linearVelocity.y;
-
-        _rigidbody.gravityScale = velocityY switch
-        {
-            < 0 => _defaultGravityScale * fallGravityMultiplier,
-            > 0 when _isJumping => _defaultGravityScale * riseGravityMultiplier,
-            _ => _defaultGravityScale
-        };
     }
 
     public void Jump(bool input, bool isGrounded)
